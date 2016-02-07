@@ -1,6 +1,19 @@
+<header style="margin: 2em 0">
+  <h2><a href="/{{repoName}}">{{repoName}}</a></h2>
+</header>
+
+{{#if basePath}}
+<ol class="breadcrumb">
+  {{#each basePath}}
+  <li class='active'>
+    <a href="{{breadcrumb mode='blob'}}">{{this}}</a>
+  </li>
+  {{/each}}
+</ol>
+{{/if}}
+
 <header>
-  <h3>{{filename}}</h3>
-  <small>Bytes: {{fsize}}</small>
+  Bytes: {{fsize}}
 </header>
 <hr>
 <pre>{{fcontent}}</pre>

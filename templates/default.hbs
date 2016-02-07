@@ -3,8 +3,29 @@
   <head>
     <meta charset="utf-8">
     <title>{{title}}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   </head>
   <body>
-    {{{body}}}
+    <div class='container'>
+      <nav class="navbar navbar-light bg-faded">
+        <a class="navbar-brand" href="/">vgit</a>
+        <ul class="nav navbar-nav">
+          <li class="nav-item active">
+            <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+          </li>
+        </ul>
+        <form class="form-inline pull-xs-right">
+          <input class="form-control" type="text" placeholder="Search">
+          <button class="btn btn-success-outline" type="submit">Search</button>
+        </form>
+      </nav>
+      {{{body}}}
+    </div>
+    <hr>
+    <div class='container' style="text-align: center; padding-bottom: 1em">
+      <small>
+        Powered by <a href="https://github.com/bbqsrc/vgit">vgit</a>.
+      </small>
+    </div>
   </body>
 </html>

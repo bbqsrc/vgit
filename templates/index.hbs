@@ -1,9 +1,14 @@
-<ul>
+<header style="margin: 2em 0">
+  <h1>Repositories</h1>
+</header>
+
+<div class="card-columns">
   {{#each repos}}
-    <li>
-      <a href="/{{name}}">
-        <strong>{{name}}</strong>
-      </a>
-    </li>
+  <div class="card">
+    <div class="card-block">
+      <a href="/{{name}}"><h4 class="card-title">{{name}}</h4></a>
+      <p class="card-text">{{description}}</p>
+    </div>
+  </div>
   {{/each}}
-</ul>
+</div>

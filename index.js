@@ -33,21 +33,29 @@ const Git = require('nodegit'),
       path = require('path'),
       Router = require('koa-rutt'),
       hbs = require('koa-hbs'),
+      send = require('koa-send'),
+      marky = require('marky-markdown'),
       config = require('./config'),
       app = koa(),
       router = new Router();
+
+function routeStatic(router, prefix, root) {
+  router.get(`${prefix}/:staticPath(.+)`, function* sendStatic() {
+    yield send(this, this.params.staticPath, { root });
+  });
+}
 
 const PATH = config.path;
 
 app.use(hbs.middleware({
   defaultLayout: 'default',
-  viewPath: __dirname + '/templates'
+  viewPath: path.join(__dirname, 'templates')
 }));
 
 function genPath(ctx, root, type) {
   const ref = root.ref.shorthand();
   const filename = path.basename(ctx.path());
-  const basePath = root.basePath || '';
+  const basePath = (root.basePath || []).join('/');
 
   return path.join(`/${root.repoName}/${type}/${ref}`, basePath, filename);
 }
@@ -58,6 +66,22 @@ hbs.registerHelper('blob', function(options) {
 
 hbs.registerHelper('tree', function(options) {
   return genPath(this, options.data.root, 'tree');
+});
+
+hbs.registerHelper('breadcrumb', function(options) {
+  const root = options.data.root;
+  const ref = root.ref.shorthand();
+  const basePath = root.basePath;
+  const index = options.data.index;
+
+  console.log(this,options);
+
+  const p = basePath.slice(0, index + 1).join('/');
+
+  if (options.hash.mode === 'blob' && options.data.last) {
+    return path.join(`/${root.repoName}/blob/${ref}`, p);
+  }
+  return path.join(`/${root.repoName}/tree/${ref}`, p);
 });
 
 function getBranches(refs) {
@@ -77,6 +101,9 @@ function* parseReferenceFromPath(repo, param) {
   return null;
 }
 
+routeStatic(router, '/static',
+  path.join(__dirname, 'node_modules/bootstrap/dist'));
+
 router
 .get('/', function* getIndex() {
   const files = yield fs.readdirAsync(PATH);
@@ -93,10 +120,12 @@ router
       const repo = yield Git.Repository.openExt(fpath + '/.git', flags, PATH);
       if (repo) {
         repo.name = fn;
+        repo.description = yield fs.readFileAsync(
+            path.join(repo.path(), 'description'), 'utf-8');
         repos.push(repo);
       }
-    } catch (err) {
-      console.log(err);
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -113,13 +142,25 @@ router
   const directories = tree.entries().filter(entry => entry.isDirectory());
   const files = tree.entries().filter(entry => !entry.isDirectory());
 
+  const readmeEntry = files.find(entry => {
+    const name = path.basename(entry.path()).toLowerCase();
+    return name.startsWith('readme');
+  });
+
+  let readme = null;
+  if (readmeEntry) {
+    const readmeBlob = yield readmeEntry.getBlob();
+    readme = marky(readmeBlob.toString()).html();
+  }
+
   yield this.render('tree', {
     repoName: this.params.repo,
     ref: ref,
-    tree, files, directories
+    readme, tree, files, directories
   });
 })
 .get('/:repo/tree/:path(.*)', function* getRepoTree() {
+  console.log('mm');
   const repoPath = path.join(PATH, this.params.repo);
   const repo = yield Git.Repository.open(repoPath);
 
@@ -137,11 +178,23 @@ router
   const directories = tree.entries().filter(entry => entry.isDirectory());
   const files = tree.entries().filter(entry => !entry.isDirectory());
 
+  const readmeEntry = files.find(entry => {
+    const name = path.basename(entry.path()).toLowerCase();
+    return name.startsWith('readme');
+  });
+
+  let readme = null;
+  if (readmeEntry) {
+    const readmeBlob = yield readmeEntry.getBlob();
+    readme = marky(readmeBlob.toString()).html();
+  }
+
+  const basePath = res.path !== '' ? res.path.split('/') : null;
+
   yield this.render('tree', {
     repoName: this.params.repo,
     ref: res.ref,
-    basePath: res.path,
-    tree, files, directories
+    readme, basePath, tree, files, directories
   });
 })
 .get('/:repo/blob/:path(.*)', function* getRepoBlob() {
@@ -152,7 +205,6 @@ router
   const commit = yield repo.getReferenceCommit(res.ref);
   const tree = yield commit.getTree();
 
-  console.log(res.path);
   const blobEntry = yield tree.entryByPath(res.path);
   blobEntry.parent = tree;
 
@@ -161,6 +213,9 @@ router
     const content = blob.isBinary() ? "(Binary not shown)" : blob.toString();
 
     yield this.render('blob', {
+      repoName: this.params.repo,
+      ref: res.ref,
+      basePath: res.path.split('/'),
       fcontent: content,
       fsize: blob.rawsize(),
       filename: path.basename(res.path)
