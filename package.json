@@ -1,0 +1,20 @@
+{
+  "name": "vgit",
+  "version": "0.0.0",
+  "description": "Web viewer for git repositories",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Brendan Molloy <brendan@bbqsrc.net>",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "bluebird": "^3.2.2",
+    "bootstrap": "^4.0.0-alpha.2",
+    "koa": "^1.1.2",
+    "koa-hbs": "^0.7.0",
+    "koa-rutt": "^0.1.0",
+    "nodegit": "^0.11.0"
+  },
+  "private": true
+}

@@ -1,0 +1,29 @@
+<div class="file-list">
+  <table>
+    <tbody>
+      {{#each directories}}
+        <tr>
+          <td>D</td>
+          <td>
+            <a href="{{tree}}">{{filename}}</a>
+          </td>
+        </tr>
+      {{/each}}
+
+      {{#each files}}
+        <tr>
+          <td>F</td>
+          <td>
+            <a href="{{blob}}">{{filename}}</a>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{#if readme}}
+<div class="readme">
+  {{readme}}
+</div>
+{{/if}}
