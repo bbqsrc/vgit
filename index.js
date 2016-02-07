@@ -144,8 +144,7 @@ router
 .get('/', function* getIndex() {
   const files = yield fs.readdirAsync(PATH);
   const flags = Git.Repository.OPEN_FLAG.OPEN_NO_SEARCH |
-                Git.Repository.OPEN_FLAG.OPEN_CROSS_FS |
-                Git.Repository.OPEN_FLAG.OPEN_BARE;
+                Git.Repository.OPEN_FLAG.OPEN_CROSS_FS;
 
   const repos = [];
 
@@ -153,7 +152,7 @@ router
     const fpath = path.join(PATH, fn);
 
     try {
-      const repo = yield Git.Repository.openExt(fpath + '/.git', flags, PATH);
+      const repo = yield Git.Repository.openExt(fpath, flags, PATH);
       if (repo) {
         repo.name = fn;
         repo.description = yield fs.readFileAsync(
