@@ -44,6 +44,29 @@ const Git = require('nodegit'),
 
 const TAG = 'vgit';
 
+function errorCatcher(config) {
+  return function* errorCatcher(next) { // eslint-disable-line
+    try {
+      yield next;
+    } catch (err) {
+      this.status = err.status || 500;
+      const msg = 'Internal server error. Please contact an administrator.';
+
+      if (config.development) {
+        this.body = `<pre>${err.stack}</pre>`;
+      } else {
+        this.body = msg;
+      }
+      this.app.emit('error', err, this);
+      Log.e(TAG, err);
+    }
+  };
+}
+
+app.use(errorCatcher({
+  development: process.env.NODE_ENV !== 'production'
+}));
+
 app.use(logger({
   exclude: /^\/static/ // Exclude based on tag param (optional)
 }));
@@ -115,7 +138,13 @@ function* appendEntryHistory(entries, repo, rpath) {
     }
 
     const fpath = path.join(rpath || '', path.basename(entry.path()));
-    const blame = yield Git.Blame.file(repo, fpath);
+    let blame;
+    try {
+      blame = yield Git.Blame.file(repo, fpath);
+    } catch (e) {
+      Log.wtf(TAG, 'appendEntryHistory', e);
+      continue;
+    }
     const count = blame.getHunkCount();
     const commits = [];
 
@@ -214,6 +243,7 @@ router
   const commit = yield repo.getReferenceCommit(res.ref);
 
   let tree = yield commit.getTree();
+
   if (res.path !== "") {
     const entry = yield tree.entryByPath(res.path);
     // &wtf;
