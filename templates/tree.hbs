@@ -1,5 +1,10 @@
-<header style="margin: 2em 0">
-  <h2><a href="/{{repoName}}">{{repoName}}</a></h2>
+<header style="margin: 2em 0" class="row">
+  <div class="col-md-6">
+    <h2><a href="/{{repoName}}">{{repoName}}</a></h2>
+  </div>
+  <div class="col-md-6">
+    <a class="btn btn-primary btn-sm" href="/{{repoName}}/branches">Change branch</a>
+  </div>
 </header>
 
 {{#if basePath}}
@@ -17,18 +22,30 @@
     <tbody>
       {{#each directories}}
         <tr>
-          <td>D</td>
-          <td style='width: 100%'>
+          <td style='width: 1px'>D</td>
+          <td>
             <a href="{{tree}}">{{filename}}</a>
+          </td>
+          <td class='text-muted'>
+            {{commit.messageProp}}
+          </td>
+          <td class='text-muted'>
+            {{commit.dateHuman}}
           </td>
         </tr>
       {{/each}}
 
       {{#each files}}
         <tr>
-          <td>F</td>
-          <td style='width: 100%'>
+          <td style='width: 1px'>F</td>
+          <td>
             <a href="{{blob}}">{{filename}}</a>
+          </td>
+          <td class='text-muted'>
+            {{commit.messageProp}}
+          </td>
+          <td class='text-muted'>
+            {{commit.dateHuman}}
           </td>
         </tr>
       {{/each}}

@@ -35,6 +35,7 @@ const Git = require('nodegit'),
       hbs = require('koa-hbs'),
       send = require('koa-send'),
       marky = require('marky-markdown'),
+      moment = require('moment'),
       config = require('./config'),
       app = koa(),
       router = new Router();
@@ -74,8 +75,6 @@ hbs.registerHelper('breadcrumb', function(options) {
   const basePath = root.basePath;
   const index = options.data.index;
 
-  console.log(this,options);
-
   const p = basePath.slice(0, index + 1).join('/');
 
   if (options.hash.mode === 'blob' && options.data.last) {
@@ -101,6 +100,35 @@ function* parseReferenceFromPath(repo, param) {
   return null;
 }
 
+function* appendEntryHistory(entries, repo, rpath) {
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      continue;
+    }
+
+    const fpath = path.join(rpath || '', path.basename(entry.path()));
+    const blame = yield Git.Blame.file(repo, fpath);
+    const count = blame.getHunkCount();
+    const commits = [];
+
+    for (let i = 0; i < count; ++i) {
+      const hunk = blame.getHunkByIndex(i);
+      commits.push(yield Git.Commit.lookup(repo, hunk.finalCommitId()));
+    }
+
+    commits.sort((a, b) => {
+      return a.date() < b.date() ? -1 : 1;
+    });
+
+    const commit = commits.pop();
+    commit.dateHuman = moment(commit.date()).fromNow();
+    commit.messageProp = commit.message();
+    entry.commit = commit;
+  }
+
+  return entries;
+}
+
 routeStatic(router, '/static',
   path.join(__dirname, 'node_modules/bootstrap/dist'));
 
@@ -122,12 +150,23 @@ router
         repo.name = fn;
         repo.description = yield fs.readFileAsync(
             path.join(repo.path(), 'description'), 'utf-8');
+
+        // Get last commit
+        const commit = yield repo.getHeadCommit();
+
+        repo.lastCommitObj = moment(commit.timeMs());
+        repo.lastCommit = repo.lastCommitObj.fromNow();
+
         repos.push(repo);
       }
     } catch (e) {
       console.error(e);
     }
   }
+
+  repos.sort((a, b) => {
+    return a.lastCommitObj.isAfter(b.lastCommitObj) ? -1 : 1;
+  })
 
   yield this.render('index', { repos });
 })
@@ -139,8 +178,9 @@ router
   const ref = yield repo.getReference('heads/master');
   const tree = yield commit.getTree();
 
-  const directories = tree.entries().filter(entry => entry.isDirectory());
-  const files = tree.entries().filter(entry => !entry.isDirectory());
+  const entries = yield appendEntryHistory(tree.entries(), repo);
+  const directories = entries.filter(entry => entry.isDirectory());
+  const files = entries.filter(entry => !entry.isDirectory());
 
   const readmeEntry = files.find(entry => {
     const name = path.basename(entry.path()).toLowerCase();
@@ -160,14 +200,13 @@ router
   });
 })
 .get('/:repo/tree/:path(.*)', function* getRepoTree() {
-  console.log('mm');
   const repoPath = path.join(PATH, this.params.repo);
   const repo = yield Git.Repository.open(repoPath);
 
   const res = yield parseReferenceFromPath(repo, this.params.path);
   const commit = yield repo.getReferenceCommit(res.ref);
-  let tree = yield commit.getTree();
 
+  let tree = yield commit.getTree();
   if (res.path !== "") {
     const entry = yield tree.entryByPath(res.path);
     // &wtf;
@@ -175,8 +214,9 @@ router
     tree = yield entry.getTree();
   }
 
-  const directories = tree.entries().filter(entry => entry.isDirectory());
-  const files = tree.entries().filter(entry => !entry.isDirectory());
+  const entries = yield appendEntryHistory(tree.entries(), repo, res.path);
+  const directories = entries.filter(entry => entry.isDirectory());
+  const files = entries.filter(entry => !entry.isDirectory());
 
   const readmeEntry = files.find(entry => {
     const name = path.basename(entry.path()).toLowerCase();
@@ -234,7 +274,9 @@ router
   const repo = yield Git.Repository.open(repoPath);
 
   const refs = yield repo.getReferences(Git.Reference.TYPE.LISTALL);
-  return (this.body = getBranches(refs));
+  const branches = getBranches(refs);
+
+  yield this.render('branches', { repoName: this.params.repo, branches });
 });
 
 app.use(router.middleware());
