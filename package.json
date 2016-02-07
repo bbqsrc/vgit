@@ -11,8 +11,12 @@
   "dependencies": {
     "bluebird": "^3.2.2",
     "bootstrap": "^4.0.0-alpha.2",
+    "huggare": "^0.4.0",
+    "huggare-log": "^0.1.0",
+    "huggare-transport-console": "^0.1.0",
     "koa": "^1.1.2",
     "koa-hbs": "^0.7.0",
+    "koa-huggare": "^0.2.1",
     "koa-rutt": "^0.1.0",
     "koa-send": "^3.1.0",
     "marky-markdown": "^6.0.3",

@@ -38,7 +38,15 @@ const Git = require('nodegit'),
       moment = require('moment'),
       config = require('./config'),
       app = koa(),
+      logger = require('koa-huggare'),
+      Log = require('huggare-log'),
       router = new Router();
+
+const TAG = 'vgit';
+
+app.use(logger({
+  exclude: /^\/static/ // Exclude based on tag param (optional)
+}));
 
 function routeStatic(router, prefix, root) {
   router.get(`${prefix}/:staticPath(.+)`, function* sendStatic() {
@@ -160,7 +168,7 @@ router
         repos.push(repo);
       }
     } catch (e) {
-      console.error(e);
+      Log.v(TAG, 'Reading index:', e);
     }
   }
 
