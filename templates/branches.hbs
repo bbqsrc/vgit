@@ -1,0 +1,11 @@
+<header style="margin: 2em 0">
+  <h2><a href="/{{repoName}}">{{repoName}}</a></h2>
+</header>
+
+<ul>
+  {{#each branches}}
+  <li>
+    <a href="/{{../repoName}}/tree/{{this}}">{{this}}</a>
+  </li>
+  {{/each}}
+</ul>
